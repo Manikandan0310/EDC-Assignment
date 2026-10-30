@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EDC Assignment – Student</title>
+<style>
+:root{color-scheme:light dark;--bg:#f6f7f9;--card:#fff;--tx:#1b1f24;--mu:#667;--ac:#1d6fd8;--bd:#d8dce2;--ok:#1a7f45}
+@media(prefers-color-scheme:dark){:root{--bg:#14171b;--card:#1d2127;--tx:#e8eaed;--mu:#9aa3ad;--ac:#5aa2ff;--bd:#343a42;--ok:#4cc27f}}
+*{box-sizing:border-box}body{margin:0;font:15px system-ui,sans-serif;background:var(--bg);color:var(--tx)}
+main{max-width:720px;margin:auto;padding:16px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:16px;margin:12px 0}
+input,select,textarea,button{font:inherit;width:100%;padding:9px;margin:4px 0 10px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx)}
+button{background:var(--ac);color:#fff;border:0;cursor:pointer;font-weight:600}button.s{background:var(--bg);color:var(--tx);border:1px solid var(--bd)}
+button:disabled{opacity:.5}.tabs{display:flex;gap:8px}.tabs button{width:auto;flex:1}
+.th{display:flex;flex-wrap:wrap;gap:6px}.th img{width:70px;height:90px;object-fit:cover;border-radius:6px}
+.hid{display:none}.mu{color:var(--mu);font-size:13px}.big{font-size:32px;font-weight:700;color:var(--ok)}
+table{width:100%;border-collapse:collapse}td,th{padding:6px;border-bottom:1px solid var(--bd);text-align:left;font-size:13px}
+.tw{overflow-x:auto}h1{font-size:20px}label{font-size:13px;color:var(--mu)}
+</style></head><body><main>
+<h1>Electronic Devices &amp; Circuits – Assignment Submission</h1>
+<section>
+ <div class="card">
+  <label>Assignment</label><select id="asg"></select>
+  <label>Name</label><input id="nm"><label>Register number</label><input id="rg" inputmode="numeric">
+  <input id="cam" type="file" accept="image/*" multiple class="hid">
+  <button class="s" id="add">📷 Add photo(s) of answer pages</button>
+  <div class="th" id="th"></div>
+  <button id="ev" class="hid">Evaluate</button>
+  <div id="msg" class="mu"></div>
+ </div>
+ <div class="card hid" id="res"><div class="big" id="tot"></div><div id="pend" class="mu"></div><div class="tw"><table id="bd"></table></div>
+  <button id="sub">Submit assignment</button></div>
+</section>
+
+</main>
+<script>
+const API = "https://script.google.com/macros/s/AKfycbwvqeU2eAX6csrld9VCnOFdgQaQGAvVUTntlu7ti8qRnfbRgtaKBiXvUzmBVWS-S0OL/exec";
+const $ = id => document.getElementById(id);
+const call = async b => { const r = await fetch(API, {method:"POST", headers:{"Content-Type":"text/plain"}, body:JSON.stringify(b)}); const j = await r.json(); if (j.error) throw new Error(j.error); return j; };
+async function compress(file, max = 1600) {
+  const b = await createImageBitmap(file), k = Math.min(1, max / Math.max(b.width, b.height));
+  const c = document.createElement("canvas"); c.width = b.width * k; c.height = b.height * k;
+  c.getContext("2d").drawImage(b, 0, 0, c.width, c.height); return c.toDataURL("image/jpeg", .82);
+}
+
+// ---------- Student ----------
+let photos = [], evalId = null;
+fetch(API).then(r => r.json()).then(j => {
+  const o = j.assignments.map(a => `<option value="${a.id}">${a.title}</option>`).join("");
+  $("asg").innerHTML = o;
+}).catch(() => $("msg").textContent = "Could not load assignments.");
+$("add").onclick = () => $("cam").click();
+$("cam").onchange = async e => {
+  for (const f of e.target.files) { const d = await compress(f); photos.push(d); const i = new Image(); i.src = d; $("th").appendChild(i); }
+  e.target.value = ""; $("ev").classList.toggle("hid", !photos.length);
+};
+$("ev").onclick = async () => {
+  if (!$("nm").value.trim() || !$("rg").value.trim()) return $("msg").textContent = "Enter name and register number first.";
+  $("ev").disabled = true; $("msg").textContent = "Reading and evaluating pages… this can take a minute.";
+  try {
+    const j = await call({action:"evaluate", assignmentId:$("asg").value, reg:$("rg").value.trim(), images:photos});
+    evalId = j.evalId; $("tot").textContent = `${j.got} / ${j.max - j.dPending}`;
+    $("pend").textContent = j.dPending ? `+ ${j.dPending} marks for circuit diagrams will be given by staff.` : "";
+    $("bd").innerHTML = "<tr><th>Question</th><th>Marks</th></tr>" + j.result.map(r => `<tr><td>${r.text}</td><td>${r.got}/${r.max}${r.diagram ? ` (+${r.diagram} diagram)` : ""}</td></tr>`).join("");
+    $("res").classList.remove("hid"); $("msg").textContent = "";
+  } catch (e) { $("msg").textContent = e.message; }
+  $("ev").disabled = false;
+};
+$("sub").onclick = async () => {
+  $("sub").disabled = true;
+  try { await call({action:"submit", evalId, name:$("nm").value.trim(), reg:$("rg").value.trim()});
+    $("res").innerHTML = "<div class='big'>✔ Submitted</div>"; $("ev").classList.add("hid"); }
+  catch (e) { alert(e.message); $("sub").disabled = false; }
+};
+
+</script></body></html>
