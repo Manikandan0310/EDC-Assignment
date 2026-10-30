@@ -46,7 +46,7 @@ h1{font-size:20px}label{font-size:13px;color:var(--mu)}input[type=range]{padding
  <div style="overflow-x:auto"><table id="bd"></table></div><button id="sub">Submit assignment</button></div>
 </main>
 <script>
-const API = "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE";
+const API = "https://script.google.com/macros/s/AKfycbweBoKPkDozbKIrVJGpGdxRwEX7SQgTNOz_tb550FS21B7k7lIndgEcO0poDUC7GzqG/exec";
 const $ = id => document.getElementById(id);
 const call = async b => { const r = await fetch(API, {method:"POST", headers:{"Content-Type":"text/plain"}, body:JSON.stringify(b)}); const j = await r.json(); if (j.error) throw new Error(j.error); return j; };
 let photos = [], evalId = null, stream = null, queue = [], src = null, mode = "scan";
